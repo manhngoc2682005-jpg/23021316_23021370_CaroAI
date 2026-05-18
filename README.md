@@ -17,3 +17,13 @@ git clone https://github.com/manhngoc2682005-jpg/23021316_23021370.git
 cd 23021316_23021370
 ### Bước 3: Khởi chạy file game (Nơi chứa giao diện Tkinter)
 python src/main.py
+# Hướng dẫn sử dụng
+Ngay khi chạy lệnh khởi chạy, cửa sổ Game sẽ hiện lên.
+## Cấu hình trận đấu: 
+Nhìn lên thanh công cụ (Menu Bar) ở góc trên, chọn Thuật toán (Alpha-Beta / Minimax) và chọn Độ sâu (Depth) mong muốn. (Khuyến nghị để Alpha-Beta và Depth 3 để có trải nghiệm mượt mà nhất).
+## Cách chơi: 
+Bạn cầm quân X (đi trước). Hãy click chuột trái vào bất kỳ ô trống nào trên bàn cờ.
+## Lượt của AI: 
+Sau khi bạn đánh, AI sẽ tự động tính toán và phản hồi bằng quân O. Hãy kiên nhẫn nếu bạn cấu hình độ sâu cao (Depth ≥ 4).
+## Kết thúc:
+Trò chơi kết thúc khi một bên tạo được đường thẳng 4 quân liên tiếp (Ngang, Dọc hoặc Chéo). Nhấn nút "Chơi mới" để reset bàn cờ.
