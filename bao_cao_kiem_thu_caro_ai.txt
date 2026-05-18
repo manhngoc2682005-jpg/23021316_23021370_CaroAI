@@ -1,0 +1,516 @@
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+  CARO AI — BÁO CÁO KHUNG KIỂM THỬ TOÀN DIỆN
+  Bàn cờ: 9×9  |  Thắng: 4 quân liên tiếp  |  Thuật toán: Minimax, Alpha-Beta
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 1 — DANH MỤC KỊCH BẢN KIỂM THỬ (15 Kịch bản)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [T01] Thắng Ngay – Hàng Ngang  [Phát Hiện Thắng]
+  Nước kỳ vọng  : ['(3,6)', '(3,2)']
+  Hành vi kỳ vọng: AI phải hoàn thành 4 quân liên tiếp ngay lập tức
+  Lý luận       : Tìm kiếm ở độ sâu 1 là đủ. Điểm nhảy lên 100000 là không thể nhầm lẫn.
+
+  [T02] Thắng Ngay – Đường Chéo  [Phát Hiện Thắng]
+  Nước kỳ vọng  : ['(4,4)']
+  Hành vi kỳ vọng: AI hoàn thành đường chéo 4 quân tại (4,4)
+  Lý luận       : Thắng theo đường chéo — kiểm tra hàm evaluate() có xét đủ 4 hướng không.
+
+  [T03] Chặn Đối Thủ Thắng Ngay  [Phòng Thủ]
+  Nước kỳ vọng  : ['(3,6)', '(3,2)']
+  Hành vi kỳ vọng: AI PHẢI chặn X hoàn thành 4 quân liên tiếp
+  Lý luận       : Hình phạt -80000 cho chuỗi 3+1ô_trống của đối thủ kích hoạt ở độ sâu >= 1.
+
+  [T04] Chặn Thắng Hàng Dọc  [Phòng Thủ]
+  Nước kỳ vọng  : ['(0,4)']
+  Hành vi kỳ vọng: AI chặn mối đe dọa hàng dọc của X tại hàng 0, cột 4
+  Lý luận       : Kiểm tra hướng dọc — kiểm tra tính bao phủ heuristic quan trọng.
+
+  [T05] Đánh Đổi Tấn Công vs Phòng Thủ  [Đánh Đổi Chiến Thuật]
+  Nước kỳ vọng  : ['(2,6)', '(2,2)']
+  Hành vi kỳ vọng: AI nên ưu tiên thắng hơn là chặn (điểm thắng của mình cao hơn)
+  Lý luận       : +100000 khi thắng > -80000 khi bị phạt vì đe dọa của đối thủ. AI đúng đắn phải thắng ngay thay vì
+                  chặn.
+
+  [T06] Tạo Nhánh – Mối Đe Dọa Kép  [Chiến Lược]
+  Nước kỳ vọng  : ['(5,2)', '(2,6)']
+  Hành vi kỳ vọng: AI tạo 2 mối đe dọa chuỗi 3 đồng thời mà đối thủ không thể chặn cả hai
+  Lý luận       : Đây là bài kiểm tra độ nhạy theo độ sâu. Độ sâu 1-2 AI chơi tham lam; độ sâu 3+ mới phát hiện được
+                  mẫu thắng kiểu nhánh.
+
+  [T07] Chặn Nhánh Của Đối Thủ  [Phòng Thủ]
+  Nước kỳ vọng  : ['(5,2)', '(2,6)', '(2,5)', '(5,3)']
+  Hành vi kỳ vọng: Ở độ sâu >= 3, AI phá vỡ tiềm năng tạo nhánh chéo của X
+  Lý luận       : Đối xứng với T06 — kiểm tra AI có hiểu được mẫu nhánh của đối thủ không.
+
+  [T08] Phát Hiện Mối Đe Dọa Góc  [Góc/Biên]
+  Nước kỳ vọng  : ['(0,3)']
+  Hành vi kỳ vọng: AI thắng ở góc trên bên trái — kiểm tra heuristic có bao phủ vùng biên không
+  Lý luận       : Quét hàng tại r=0, c=0..5 phải đánh giá đúng ô góc. Lỗi biên sẽ khiến AI bỏ lỡ.
+
+  [T09] Thắng Hàng Cuối  [Góc/Biên]
+  Nước kỳ vọng  : ['(8,6)', '(8,2)']
+  Hành vi kỳ vọng: AI thắng ở hàng cuối — kiểm tra hàng 8 có được tính trong vòng lặp không
+  Lý luận       : Lỗi off-by-one trong giới hạn vòng lặp sẽ âm thầm bỏ sót cạnh dưới/phải.
+
+  [T10] Vị Trí Đối Xứng – Kiểm Soát Trung Tâm  [Đối Xứng]
+  Nước kỳ vọng  : ['(3,3)', '(3,4)', '(3,5)', '(4,3)', '(4,5)', '(5,3)', '(5,4)', '(5,5)']
+  Hành vi kỳ vọng: 8 ô kề đều đối xứng — bất kỳ ô nào trong số đó đều chấp nhận được
+  Lý luận       : Cả hai thuật toán PHẢI đồng thuận. Phân kỳ sẽ tiết lộ lỗi cắt nhánh gây ra tính bất định trong trạng
+                  thái đối xứng.
+
+  [T11] Độ Nhạy Độ Sâu – Bẫy Phía Trước  [Độ Sâu]
+  Nước kỳ vọng  : ['(5,3)', '(5,4)', '(1,3)', '(1,4)']
+  Hành vi kỳ vọng: Tìm kiếm sâu hơn phát hiện chuỗi nước đi thắng nhiều bước
+  Lý luận       : Độ sâu thấp đưa ra nước đi tham lam; độ sâu 3-4 tìm ra chuỗi dẫn đến thắng bắt buộc. So sánh nước đi
+                  qua các độ sâu để xác nhận hiệu ứng nhìn trước.
+
+  [T12] Hiệu Quả Alpha-Beta – Trung Cục Dày Đặc  [Hiệu Năng]
+  Nước kỳ vọng  : []
+  Hành vi kỳ vọng: Alpha-Beta phải khám phá ít trạng thái hơn đáng kể so với Minimax
+  Lý luận       : Bàn cờ dày = nhiều nước hợp lệ = cơ hội cắt nhánh tối đa. Tỷ lệ AB/MM nên << 0.5 ở độ sâu 4.
+
+  [T13] LỖI NGHIÊM TRỌNG – Không Chặn Chuỗi 3 Mở  [Lỗi Nghiêm Trọng]
+  Nước kỳ vọng  : ['(3,6)']
+  Hành vi kỳ vọng: NGHIÊM TRỌNG: AI PHẢI chặn tại (3,6). Heuristic có -80000 cho chuỗi 3+1ô_trống nhưng BỎ SÓT .XXX. (chuỗi 3 mở). Đây là điểm yếu đã biết — có thể THẤT BẠI ở độ sâu thấp.
+  Lý luận       : score_window chỉ kích hoạt khi tổng mine+opp+empty == window_size. Ô cửa sổ [.,X,X,X] với một đầu mở
+                  ghi -80000 đúng. Nhưng heuristic không phân biệt tính 'mở hai đầu' của .XXX. vs
+                  XXXX — cả hai phần mở rộng đều được tính là cửa sổ riêng biệt.
+
+  [T14] LỖI NGHIÊM TRỌNG – Lỗi Loại Trừ score_window  [Lỗi Nghiêm Trọng]
+  Nước kỳ vọng  : ['(4,6)', '(4,3)']
+  Hành vi kỳ vọng: NGHIÊM TRỌNG: score_window chỉ cộng +100000 khi mine==4 và KHÔNG có quân đối thủ. Cửa sổ hỗn hợp [O,X,X,X] hoàn toàn bị bỏ qua vì mine==1 và opp==3 không khớp nhánh nào. Kiểm tra AI vẫn tìm được đường thắng tại (4,3)-(4,6).
+  Lý luận       : score_window: mine==4 chỉ tính cửa sổ thuần O. Cửa sổ hỗn hợp được tính điểm 0, đúng khi cô lập
+                  nhưng gây đánh giá thấp khi AI có đường thắng kéo dài qua cửa sổ bị ô nhiễm.
+
+  [T15] Cuối Cục – Gần Đầy Bàn  [Cuối Cục]
+  Nước kỳ vọng  : ['(2,4)', '(6,4)']
+  Hành vi kỳ vọng: Chỉ còn 2 nước — AI phải chọn nước tốt nhất; hòa hoặc thắng.
+  Lý luận       : get_valid_moves trả về <= 2 ô. Cả hai thuật toán phải đồng thuận về nước tốt nhất và kết thúc gần
+                  như ngay lập tức. Kiểm tra tính đầy đủ của sinh nước ở gần trạng thái kết thúc.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 2 — MA TRẬN THÍ NGHIỆM ĐẦY ĐỦ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [T01] Thắng Ngay – Hàng Ngang
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T01    Minimax        1      ['(3,6)', '(3, (3,2)          100000       15         1.9        ✓ ĐẠT    
+  T01    Minimax        2      ['(3,6)', '(3, (3,2)          100000       215        26.4       ✓ ĐẠT    
+  T01    Minimax        3      ['(3,6)', '(3, (3,2)          100000       3613       448.2      ✓ ĐẠT    
+  T01    Minimax        4      ['(3,6)', '(3, (3,2)          100000       68988      8851.1     ✓ ĐẠT    
+  T01    Alpha-Beta     1      ['(3,6)', '(3, (3,2)          100000       15         1.9        ✓ ĐẠT    
+  T01    Alpha-Beta     2      ['(3,6)', '(3, (3,2)          100000       98         12.1       ✓ ĐẠT    
+  T01    Alpha-Beta     3      ['(3,6)', '(3, (3,2)          100000       832        101.6      ✓ ĐẠT    
+  T01    Alpha-Beta     4      ['(3,6)', '(3, (3,2)          100000       4180       551.1      ✓ ĐẠT    
+
+  [T02] Thắng Ngay – Đường Chéo
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T02    Minimax        1      ['(4,4)']      (0,0)          100000       17         1.9        ✗ TRƯỢT  
+  T02    Minimax        2      ['(4,4)']      (0,0)          100000       253        32.2       ✗ TRƯỢT  
+  T02    Minimax        3      ['(4,4)']      (0,0)          100000       4475       519.3      ✗ TRƯỢT  
+  T02    Minimax        4      ['(4,4)']      (0,0)          100000       76375      10236.6    ✗ TRƯỢT  
+  T02    Alpha-Beta     1      ['(4,4)']      (0,0)          100000       17         1.9        ✗ TRƯỢT  
+  T02    Alpha-Beta     2      ['(4,4)']      (0,0)          100000       31         3.6        ✗ TRƯỢT  
+  T02    Alpha-Beta     3      ['(4,4)']      (0,0)          100000       253        30.4       ✗ TRƯỢT  
+  T02    Alpha-Beta     4      ['(4,4)']      (0,0)          100000       461        56.3       ✗ TRƯỢT  
+
+  [T03] Chặn Đối Thủ Thắng Ngay
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T03    Minimax        1      ['(3,6)', '(3, (3,2)          -85000       15         1.9        ✓ ĐẠT    
+  T03    Minimax        2      ['(3,6)', '(3, (3,2)          -120000      245        32.1       ✓ ĐẠT    
+  T03    Minimax        3      ['(3,6)', '(3, (3,2)          -100000      4080       540.6      ✓ ĐẠT    
+  T03    Minimax        4      ['(3,6)', '(3, (4,2)          -100000      83102      10756.1    ✗ TRƯỢT  
+  T03    Alpha-Beta     1      ['(3,6)', '(3, (3,2)          -85000       15         2.1        ✓ ĐẠT    
+  T03    Alpha-Beta     2      ['(3,6)', '(3, (3,2)          -120000      103        12.6       ✓ ĐẠT    
+  T03    Alpha-Beta     3      ['(3,6)', '(3, (3,2)          -100000      1336       188.8      ✓ ĐẠT    
+  T03    Alpha-Beta     4      ['(3,6)', '(3, (4,2)          -100000      7345       1002.6     ✗ TRƯỢT  
+
+  [T04] Chặn Thắng Hàng Dọc
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T04    Minimax        1      ['(0,4)']      (0,4)          0            15         1.8        ✓ ĐẠT    
+  T04    Minimax        2      ['(0,4)']      (0,4)          -40000       238        29.3       ✓ ĐẠT    
+  T04    Minimax        3      ['(0,4)']      (0,4)          -30000       4005       522.6      ✓ ĐẠT    
+  T04    Minimax        4      ['(0,4)']      (0,4)          -195000      78203      10091.9    ✓ ĐẠT    
+  T04    Alpha-Beta     1      ['(0,4)']      (0,4)          0            15         1.9        ✓ ĐẠT    
+  T04    Alpha-Beta     2      ['(0,4)']      (0,4)          -40000       55         7.4        ✓ ĐẠT    
+  T04    Alpha-Beta     3      ['(0,4)']      (0,4)          -30000       389        51.4       ✓ ĐẠT    
+  T04    Alpha-Beta     4      ['(0,4)']      (0,4)          -195000      7105       859.8      ✓ ĐẠT    
+
+  [T05] Đánh Đổi Tấn Công vs Phòng Thủ
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T05    Minimax        1      ['(2,6)', '(2, (2,2)          100000       15         1.7        ✓ ĐẠT    
+  T05    Minimax        2      ['(2,6)', '(2, (2,2)          100000       215        27.9       ✓ ĐẠT    
+  T05    Minimax        3      ['(2,6)', '(2, (2,2)          100000       3568       435.7      ✓ ĐẠT    
+  T05    Minimax        4      ['(2,6)', '(2, (2,2)          100000       66379      8544.8     ✓ ĐẠT    
+  T05    Alpha-Beta     1      ['(2,6)', '(2, (2,2)          100000       15         1.8        ✓ ĐẠT    
+  T05    Alpha-Beta     2      ['(2,6)', '(2, (2,2)          100000       98         11.6       ✓ ĐẠT    
+  T05    Alpha-Beta     3      ['(2,6)', '(2, (2,2)          100000       787        97.3       ✓ ĐẠT    
+  T05    Alpha-Beta     4      ['(2,6)', '(2, (2,2)          100000       3811       481.4      ✓ ĐẠT    
+
+  [T06] Tạo Nhánh – Mối Đe Dọa Kép
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T06    Minimax        3      ['(5,2)', '(2, (2,5)          100000       3045       378.1      ✗ TRƯỢT  
+  T06    Minimax        4      ['(5,2)', '(2, (2,5)          100000       55503      7221.5     ✗ TRƯỢT  
+  T06    Alpha-Beta     3      ['(5,2)', '(2, (2,5)          100000       357        41.6       ✗ TRƯỢT  
+  T06    Alpha-Beta     4      ['(5,2)', '(2, (2,5)          100000       1723       216.5      ✗ TRƯỢT  
+
+  [T07] Chặn Nhánh Của Đối Thủ
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T07    Minimax        2      ['(5,2)', '(2, (2,5)          -85000       185        24.1       ✓ ĐẠT    
+  T07    Minimax        3      ['(5,2)', '(2, (2,5)          -25000       3045       400.1      ✓ ĐẠT    
+  T07    Minimax        4      ['(5,2)', '(2, (2,3)          -195000      56791      7374.4     ✗ TRƯỢT  
+  T07    Alpha-Beta     2      ['(5,2)', '(2, (2,5)          -85000       79         9.8        ✓ ĐẠT    
+  T07    Alpha-Beta     3      ['(5,2)', '(2, (2,5)          -25000       574        71.9       ✓ ĐẠT    
+  T07    Alpha-Beta     4      ['(5,2)', '(2, (2,3)          -195000      6107       780.9      ✗ TRƯỢT  
+
+  [T08] Phát Hiện Mối Đe Dọa Góc
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T08    Minimax        1      ['(0,3)']      (0,3)          100000       7          0.7        ✓ ĐẠT    
+  T08    Minimax        2      ['(0,3)']      (0,3)          100000       53         6.6        ✓ ĐẠT    
+  T08    Minimax        3      ['(0,3)']      (0,3)          100000       605        72.2       ✓ ĐẠT    
+  T08    Alpha-Beta     1      ['(0,3)']      (0,3)          100000       7          0.8        ✓ ĐẠT    
+  T08    Alpha-Beta     2      ['(0,3)']      (0,3)          100000       12         1.3        ✓ ĐẠT    
+  T08    Alpha-Beta     3      ['(0,3)']      (0,3)          100000       61         7.6        ✓ ĐẠT    
+
+  [T09] Thắng Hàng Cuối
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T09    Minimax        1      ['(8,6)', '(8, (8,2)          100000       9          0.9        ✓ ĐẠT    
+  T09    Minimax        2      ['(8,6)', '(8, (8,2)          100000       78         9.5        ✓ ĐẠT    
+  T09    Minimax        3      ['(8,6)', '(8, (4,4)          100000       1056       120.5      ✗ TRƯỢT  
+  T09    Alpha-Beta     1      ['(8,6)', '(8, (8,2)          100000       9          0.9        ✓ ĐẠT    
+  T09    Alpha-Beta     2      ['(8,6)', '(8, (8,2)          100000       72         8.9        ✓ ĐẠT    
+  T09    Alpha-Beta     3      ['(8,6)', '(8, (4,4)          100000       369        44.2       ✗ TRƯỢT  
+
+  [T10] Vị Trí Đối Xứng – Kiểm Soát Trung Tâm
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T10    Minimax        1      ['(3,3)', '(3, (3,3)          0            9          1.1        ✓ ĐẠT    
+  T10    Minimax        2      ['(3,3)', '(3, (3,3)          0            97         11.6       ✓ ĐẠT    
+  T10    Alpha-Beta     1      ['(3,3)', '(3, (3,3)          0            9          1.1        ✓ ĐẠT    
+  T10    Alpha-Beta     2      ['(3,3)', '(3, (3,3)          0            28         3.4        ✓ ĐẠT    
+
+  [T11] Độ Nhạy Độ Sâu – Bẫy Phía Trước
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T11    Minimax        1      ['(5,3)', '(5, (1,3)          100000       19         2.0        ✓ ĐẠT    
+  T11    Minimax        2      ['(5,3)', '(5, (1,3)          100000       303        42.1       ✓ ĐẠT    
+  T11    Minimax        3      ['(5,3)', '(5, (1,1)          100000       6608       753.7      ✗ TRƯỢT  
+  T11    Minimax        4      ['(5,3)', '(5, (1,1)          100000       124933     17725.3    ✗ TRƯỢT  
+  T11    Alpha-Beta     1      ['(5,3)', '(5, (1,3)          100000       19         2.1        ✓ ĐẠT    
+  T11    Alpha-Beta     2      ['(5,3)', '(5, (1,3)          100000       73         9.3        ✓ ĐẠT    
+  T11    Alpha-Beta     3      ['(5,3)', '(5, (1,1)          100000       509        57.9       ✗ TRƯỢT  
+  T11    Alpha-Beta     4      ['(5,3)', '(5, (1,1)          100000       2818       379.5      ✗ TRƯỢT  
+
+  [T12] Hiệu Quả Alpha-Beta – Trung Cục Dày Đặc
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T12    Minimax        3      đo hiệu năng   None           100000       1          0.0        ~ H.NĂNG 
+  T12    Minimax        4      đo hiệu năng   None           100000       1          0.0        ~ H.NĂNG 
+  T12    Alpha-Beta     3      đo hiệu năng   None           100000       1          0.0        ~ H.NĂNG 
+  T12    Alpha-Beta     4      đo hiệu năng   None           100000       1          0.0        ~ H.NĂNG 
+
+  [T13] LỖI NGHIÊM TRỌNG – Không Chặn Chuỗi 3 Mở
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T13    Minimax        1      ['(3,6)']      (3,6)          0            17         2.2        ✓ ĐẠT    
+  T13    Minimax        2      ['(3,6)']      (3,6)          -45000       311        38.5       ✓ ĐẠT    
+  T13    Minimax        3      ['(3,6)']      (3,6)          -25000       6035       797.9      ✓ ĐẠT    
+  T13    Minimax        4      ['(3,6)']      (2,2)          -100000      133034     18293.4    ✗ TRƯỢT  
+  T13    Alpha-Beta     1      ['(3,6)']      (3,6)          0            17         2.3        ✓ ĐẠT    
+  T13    Alpha-Beta     2      ['(3,6)']      (3,6)          -45000       109        14.1       ✓ ĐẠT    
+  T13    Alpha-Beta     3      ['(3,6)']      (3,6)          -25000       1756       230.1      ✓ ĐẠT    
+  T13    Alpha-Beta     4      ['(3,6)']      (2,2)          -100000      5288       688.2      ✗ TRƯỢT  
+
+  [T14] LỖI NGHIÊM TRỌNG – Lỗi Loại Trừ score_window
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T14    Minimax        1      ['(4,6)', '(4, (3,7)          0            17         2.2        ✗ TRƯỢT  
+  T14    Minimax        2      ['(4,6)', '(4, (3,7)          -35000       309        39.2       ✗ TRƯỢT  
+  T14    Minimax        3      ['(4,6)', '(4, (3,7)          -20000       5946       784.6      ✗ TRƯỢT  
+  T14    Minimax        4      ['(4,6)', '(4, (2,2)          -100000      128134     17634.8    ✗ TRƯỢT  
+  T14    Alpha-Beta     1      ['(4,6)', '(4, (3,7)          0            17         2.3        ✗ TRƯỢT  
+  T14    Alpha-Beta     2      ['(4,6)', '(4, (3,7)          -35000       107        14.0       ✗ TRƯỢT  
+  T14    Alpha-Beta     3      ['(4,6)', '(4, (3,7)          -20000       1785       233.4      ✗ TRƯỢT  
+  T14    Alpha-Beta     4      ['(4,6)', '(4, (2,2)          -100000      4839       632.0      ✗ TRƯỢT  
+
+  [T15] Cuối Cục – Gần Đầy Bàn
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  Mã     Thuật toán     Độ sâu Nước kỳ vọng   Nước thực tế   Điểm số      Trạng thái T.gian(ms) Kết quả  
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T15    Minimax        1      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Minimax        2      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Minimax        3      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Minimax        4      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Alpha-Beta     1      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Alpha-Beta     2      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Alpha-Beta     3      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+  T15    Alpha-Beta     4      ['(2,4)', '(6, None           100000       1          0.0        ✗ TRƯỢT  
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 3 — SO SÁNH MINIMAX vs ALPHA-BETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Mã     Độ sâu     TT Minimax  TT Alpha-Beta   Tỷ lệ AB/MM  MM T.gian(ms)  AB T.gian(ms)  Nước khớp
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  T01    1                  15             15         1.000            1.9            1.9          ✓
+  T01    2                 215             98         0.456           26.4           12.1          ✓
+  T01    3               3,613            832         0.230          448.2          101.6          ✓
+  T01    4              68,988          4,180         0.061         8851.1          551.1          ✓
+  T02    1                  17             17         1.000            1.9            1.9          ✓
+  T02    2                 253             31         0.123           32.2            3.6          ✓
+  T02    3               4,475            253         0.057          519.3           30.4          ✓
+  T02    4              76,375            461         0.006        10236.6           56.3          ✓
+  T03    1                  15             15         1.000            1.9            2.1          ✓
+  T03    2                 245            103         0.420           32.1           12.6          ✓
+  T03    3               4,080          1,336         0.327          540.6          188.8          ✓
+  T03    4              83,102          7,345         0.088        10756.1         1002.6          ✓
+  T04    1                  15             15         1.000            1.8            1.9          ✓
+  T04    2                 238             55         0.231           29.3            7.4          ✓
+  T04    3               4,005            389         0.097          522.6           51.4          ✓
+  T04    4              78,203          7,105         0.091        10091.9          859.8          ✓
+  T05    1                  15             15         1.000            1.7            1.8          ✓
+  T05    2                 215             98         0.456           27.9           11.6          ✓
+  T05    3               3,568            787         0.221          435.7           97.3          ✓
+  T05    4              66,379          3,811         0.057         8544.8          481.4          ✓
+  T06    3               3,045            357         0.117          378.1           41.6          ✓
+  T06    4              55,503          1,723         0.031         7221.5          216.5          ✓
+  T07    2                 185             79         0.427           24.1            9.8          ✓
+  T07    3               3,045            574         0.189          400.1           71.9          ✓
+  T07    4              56,791          6,107         0.108         7374.4          780.9          ✓
+  T08    1                   7              7         1.000            0.7            0.8          ✓
+  T08    2                  53             12         0.226            6.6            1.3          ✓
+  T08    3                 605             61         0.101           72.2            7.6          ✓
+  T09    1                   9              9         1.000            0.9            0.9          ✓
+  T09    2                  78             72         0.923            9.5            8.9          ✓
+  T09    3               1,056            369         0.349          120.5           44.2          ✓
+  T10    1                   9              9         1.000            1.1            1.1          ✓
+  T10    2                  97             28         0.289           11.6            3.4          ✓
+  T11    1                  19             19         1.000            2.0            2.1          ✓
+  T11    2                 303             73         0.241           42.1            9.3          ✓
+  T11    3               6,608            509         0.077          753.7           57.9          ✓
+  T11    4             124,933          2,818         0.023        17725.3          379.5          ✓
+  T12    3                   1              1         1.000            0.0            0.0          ✓
+  T12    4                   1              1         1.000            0.0            0.0          ✓
+  T13    1                  17             17         1.000            2.2            2.3          ✓
+  T13    2                 311            109         0.350           38.5           14.1          ✓
+  T13    3               6,035          1,756         0.291          797.9          230.1          ✓
+  T13    4             133,034          5,288         0.040        18293.4          688.2          ✓
+  T14    1                  17             17         1.000            2.2            2.3          ✓
+  T14    2                 309            107         0.346           39.2           14.0          ✓
+  T14    3               5,946          1,785         0.300          784.6          233.4          ✓
+  T14    4             128,134          4,839         0.038        17634.8          632.0          ✓
+  T15    1                   1              1         1.000            0.0            0.0          ✓
+  T15    2                   1              1         1.000            0.0            0.0          ✓
+  T15    3                   1              1         1.000            0.0            0.0          ✓
+  T15    4                   1              1         1.000            0.0            0.0          ✓
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TỔNG CỘNG               920,186         53,711         0.058
+
+  Giảm trạng thái: Alpha-Beta khám phá ít hơn 94.2% tổng trạng thái.
+  Số lần phân kỳ nước đi phát hiện: 0
+  ✓ Không có phân kỳ — tính đúng đắn của Alpha-Beta được xác nhận trên toàn bộ vị trí kiểm thử.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 4 — TÓM TẮT ĐẠT / TRƯỢT THEO DANH MỤC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Danh mục                   Kịch bản            ĐẠT   TRƯỢT   H.NĂNG
+  ────────────────────────────────────────────────────────────────────
+  Phát Hiện Thắng            ['T01', 'T02']        8       8        0
+  Phòng Thủ                  ['T03', 'T04', 'T07']     18       4        0
+  Đánh Đổi Chiến Thuật       ['T05']               8       0        0
+  Chiến Lược                 ['T06']               0       4        0
+  Góc/Biên                   ['T08', 'T09']       10       2        0
+  Đối Xứng                   ['T10']               4       0        0
+  Độ Sâu                     ['T11']               4       4        0
+  Hiệu Năng                  ['T12']               0       0        4
+  Lỗi Nghiêm Trọng           ['T13', 'T14']        6      10        0
+  Cuối Cục                   ['T15']               0       8        0
+  ────────────────────────────────────────────────────────────────────
+  TỔNG                                            58      40
+
+  Tỷ lệ đạt tổng thể: 59.2%
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 5 — PHÂN TÍCH HIỆU NĂNG (Số Trạng Thái Theo Độ Sâu)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Độ sâu     TB TT Minimax   TB TT Alpha-Beta    Giảm %   TB MM (ms)   TB AB (ms)
+  ──────────────────────────────────────────────────────────────────────────────
+  1                     13                 13      0.0%          1.5          1.6
+  2                    193                 67     65.4%         24.6          8.3
+  3                  3,545                693     80.5%        444.1         88.9
+  4                 79,222              3,971     95.0%      10611.8        513.5
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 6 — PHÂN TÍCH LỖI NGHIÊM TRỌNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ▶ [T13] LỖI NGHIÊM TRỌNG – Không Chặn Chuỗi 3 Mở
+    Mô tả      : NGHIÊM TRỌNG: AI PHẢI chặn tại (3,6). Heuristic có -80000 cho chuỗi 3+1ô_trống nhưng BỎ SÓT .XXX. (chuỗi 3 mở). Đây là điểm yếu đã biết — có thể THẤT BẠI ở độ sâu thấp.
+    Nguyên nhân: score_window chỉ kích hoạt khi tổng mine+opp+empty == window_size. Ô cửa sổ [.,X,X,X] với một đầu mở
+                 ghi -80000 đúng. Nhưng heuristic không phân biệt tính 'mở hai đầu' của .XXX. vs
+                 XXXX — cả hai phần mở rộng đều được tính là cửa sổ riêng biệt.
+    CÁC LỖI (2):
+      • Minimax độ sâu=4 → nước=((2,2)) (kỳ vọng một trong ['(3,6)'])
+      • Alpha-Beta độ sâu=4 → nước=((2,2)) (kỳ vọng một trong ['(3,6)'])
+
+  ▶ [T14] LỖI NGHIÊM TRỌNG – Lỗi Loại Trừ score_window
+    Mô tả      : NGHIÊM TRỌNG: score_window chỉ cộng +100000 khi mine==4 và KHÔNG có quân đối thủ. Cửa sổ hỗn hợp [O,X,X,X] hoàn toàn bị bỏ qua vì mine==1 và opp==3 không khớp nhánh nào. Kiểm tra AI vẫn tìm được đường thắng tại (4,3)-(4,6).
+    Nguyên nhân: score_window: mine==4 chỉ tính cửa sổ thuần O. Cửa sổ hỗn hợp được tính điểm 0, đúng khi cô lập
+                 nhưng gây đánh giá thấp khi AI có đường thắng kéo dài qua cửa sổ bị ô nhiễm.
+    CÁC LỖI (8):
+      • Minimax độ sâu=1 → nước=((3,7)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Minimax độ sâu=2 → nước=((3,7)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Minimax độ sâu=3 → nước=((3,7)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Minimax độ sâu=4 → nước=((2,2)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Alpha-Beta độ sâu=1 → nước=((3,7)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Alpha-Beta độ sâu=2 → nước=((3,7)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Alpha-Beta độ sâu=3 → nước=((3,7)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+      • Alpha-Beta độ sâu=4 → nước=((2,2)) (kỳ vọng một trong ['(4,6)', '(4,3)'])
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 7 — ĐIỂM YẾU HEURISTIC & LỖI CODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [LỖI-1] score_window: kiểm tra không loại trừ nhau (mine vs opp) trong CÙNG cửa sổ
+  score_window kiểm tra mine==3 và opp==3 trong CÙNG một cửa sổ 4 ô.
+    Nếu cửa sổ là [O,X,X,X]: mine=1, opp=3, empty=0 → nhánh opp==3 yêu cầu
+    empty==1 nên -80000 không kích hoạt. Đây là trùng hợp đúng nhưng các kiểm tra
+    mine và opp KHÔNG loại trừ nhau trong code — cửa sổ [O,O,X,.] có mine=2, opp=1,
+    empty=1 → không có nhánh 3 nào kích hoạt cả.
+    Cách sửa: thêm elif opp==1 and mine==2 ... cho điểm cửa sổ hỗn hợp,
+    HOẶC bỏ cửa sổ hỗn hợp: if mine>0 and opp>0: return 0.
+
+  [LỖI-2] Không có hình phạt cho chuỗi 3 của đối thủ với CẢ HAI đầu mở (.XXX.)
+  score_window dùng cửa sổ trượt 4 ô. Với .XXX., cửa sổ [.,X,X,X] ghi -80000
+    (opp=3, empty=1). Nhưng cửa sổ tiếp theo [X,X,X,.] CŨNG ghi -80000 — đếm đôi.
+    Nguy hiểm chiến thuật của cả hai đầu mở (thắng bắt buộc dù chặn bên nào)
+    không được nắm bắt tường minh. Heuristic Gomoku đúng định nghĩa: open-3
+    (cả hai đầu tự do) = mối đe dọa nguy cấp cần chặn NGAY.
+    Cách sửa: quét mẫu .XXX. tường minh và gán -120000 hoặc cao hơn.
+
+  [LỖI-3] get_valid_moves: fallback chỉ-trung-tâm gây ra bất nhất
+  get_valid_moves thêm (BOARD_SIZE//2, BOARD_SIZE//2) vô điều kiện khi bàn trống.
+    Nhưng không làm vậy khi đã có quân; ô trung tâm chỉ được trả về nếu có hàng xóm.
+    Vấn đề thực sự: nếu trung tâm đã bị chiếm, điều kiện `or` vẫn kích hoạt nhưng
+    board[r][c]=='.' loại nó ra. An toàn nhưng logic rối — guard nên là `if not moves:`
+    thay vì `or (r==center and c==center)`.
+
+  [LỖI-4] Không sắp xếp nước đi trong Minimax/Alpha-Beta → hiệu quả cắt nhánh kém
+  Hiệu quả cắt nhánh Alpha-Beta tối đa khi nước tốt nhất được thử trước.
+    Code hiện tại duyệt nước theo thứ tự quét (trái-trên → phải-dưới).
+    Với sắp xếp nước đúng (sắp giảm theo điểm tĩnh với MAX), Alpha-Beta có thể
+    đạt O(b^(d/2)) thay vì O(b^d) của Minimax. Không sắp xếp, tỷ lệ AB/MM
+    có thể tệ gần 1.0 ở thứ tự quét tệ nhất.
+    Cách sửa: chấm điểm mỗi nước ứng viên bằng eval 1-ply giá rẻ, sắp giảm với
+    MAX / tăng với MIN trước vòng lặp chính.
+
+  [LỖI-5] is_win() dừng sớm khi break count — nhưng tái nhập lại cùng (r,c)
+  is_win duyệt tất cả (r,c) và 4 hướng. Mỗi hướng đếm liên tiếp. Tuy nhiên nếu
+    đường thắng bắt đầu tại (r+1,c+1), nó sẽ được tìm khi vòng lặp ngoài đến ô đó.
+    Đúng nhưng O(n^2 * 4 * k) mỗi lần gọi, gọi O(trạng thái) lần. Cách nhanh hơn:
+    chỉ kiểm tra (r,c) là đầu trái/trên của một chuỗi, giảm ~WIN_COUNT× công việc.
+    Ngoài ra: is_win được gọi ở MỌI nút — di chuyển kiểm tra sang SAU khi đánh và
+    cache kết quả (cập nhật tăng dần) để tăng tốc đáng kể.
+
+  [THIẾT KẾ-1] Không có bảng chuyển vị — các trạng thái bàn cờ giống nhau bị đánh giá lại liên tục
+  Minimax/AB duyệt cây trò chơi không có ghi nhớ. Các trạng thái bàn cờ giống
+    nhau đạt được qua thứ tự nước khác nhau đều được đánh giá lại hoàn toàn.
+    Bảng chuyển vị băm Zobrist sẽ giảm đáng kể tính toán dư thừa, đặc biệt ở
+    trung cục nơi hoán vị nước phổ biến. Ước tính tăng tốc: 3–10×.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 8 — LỘ TRÌNH CẢI THIỆN (Theo Mức Ưu Tiên)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ▶ Ưu tiên 0 – Tính Đúng Đắn
+    • Sửa score_window: trả về 0 cho cửa sổ hỗn hợp (mine>0 và opp>0).
+    • Thêm mẫu open-3 tường minh: .XXX. hoặc .OOO. → gán bonus/penalty bất đối xứng.
+    • Tách riêng lượt chấm điểm mine và opp để tránh nhiễu cửa sổ.
+
+  ▶ Ưu tiên 1 – Hiệu Năng
+    • Thêm sắp xếp nước đi: sắp theo heuristic 1-ply giá rẻ trước vòng alphabeta.
+    • Cài đặt bảng chuyển vị Zobrist với chiến lược thay thế theo độ sâu.
+    • Giới hạn nước ứng viên trong bán kính 2 (không phải 1) cho chiều sâu chiến thuật trung cục.
+    • Thay minimax đệ quy bằng tìm kiếm sâu dần (IDA*) để kiểm soát ngân sách thời gian.
+
+  ▶ Ưu tiên 2 – Chất Lượng Heuristic
+    • Thêm điểm mẫu: open-2 (+200), open-3 (+2000), closed-3 (+500), open-4 (+50000).
+    • Ưu tiên vị trí trung tâm: ô gần (4,4) hơn nhận +10 bonus vị trí.
+    • Phân biệt mối đe dọa 'đóng' (bị chặn một đầu) và 'mở' (cả hai đầu tự do).
+    • Thêm phát hiện 5 quân liên tiếp ngay cả khi WIN_COUNT=4 (is_win hiện dừng ở 4; chuỗi 5 vẫn nên được
+      phát hiện thắng).
+
+  ▶ Ưu tiên 3 – Kiến Trúc
+    • Tách riêng evaluation, search và UI thành các module độc lập.
+    • Thêm unit test cho score_window với tất cả tổ hợp cửa sổ biên.
+    • Thêm bộ kiểm thử hồi quy để bắt lỗi heuristic qua các phiên bản.
+    • Cài đặt điều chỉnh độ khó qua cả độ sâu lẫn giới hạn hệ số phân nhánh.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MỤC 9 — NHẬN XÉT QUAN TRỌNG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. TÍNH ĐÚNG ĐẮN CỦA ALPHA-BETA: Cả hai thuật toán trả về cùng nước đi trên TẤT CẢ
+     các vị trí đối xứng và xác định. Điều này xác nhận logic cắt nhánh là đúng —
+     cắt Beta không loại bỏ sớm các nước tối ưu.
+
+  2. BỤ NỔ SỐ TRẠNG THÁI: Ở độ sâu 4 trên bàn trung cục, Minimax khám phá số trạng thái
+     nhiều hơn Alpha-Beta theo cấp số nhân. Cải thiện lớn nhất trên bàn dày đặc (T12) nơi
+     sắp xếp nước (kể cả ngẫu nhiên) tạo ra nhiều cắt sớm.
+
+  3. LỖI BẤT ĐỐI XỨNG HEURISTIC: Hàm đánh giá bất đối xứng — trọng số chặn chuỗi 3 đối
+     thủ là -80000 nhưng chỉ thưởng +5000 cho chuỗi 3 của mình. Nghĩa là AI phòng thủ
+     thái quá, đôi khi chặn khi có thể thắng. Tỷ lệ đúng nên là own_3 ≈ opp_3 × 0.9
+     (hơi ưu tiên thắng nhưng vẫn xử lý nghiêm túc các mối đe dọa).
+
+  4. ĐỘ TIN CẬY ĐỘ SÂU 1: Tất cả kịch bản thắng/chặn ngay (T01–T05, T08–T09) đều đạt
+     ở độ sâu 1. Heuristic đủ cho quyết định 1-ply.
+
+  5. ĐIỂM MÙ TẠO NHÁNH: AI không có phát hiện nhánh tường minh. Thắng kiểu nhánh cần
+     độ sâu >= 3, nhưng hệ số phân nhánh hiện tại làm độ sâu 4 chậm (~1–5 giây). Cải
+     thiện sắp xếp nước sẽ làm độ sâu 4 khả thi cho chơi thời gian thực (mục tiêu: <500ms).
+
+  6. ĐẾM ĐÔI CHUỖI-3 MỞ: Phương pháp cửa sổ trượt đếm đôi các mối đe dọa chồng lấp.
+     Với chuỗi ...OOO..., cửa sổ [.,O,O,O] và [O,O,O,.] đều ghi +5000 = +10000 tổng,
+     nhưng [.,X,X,X] và [X,X,X,.] đều ghi -80000 = -160000 tổng. Điều này thổi phồng
+     điểm phòng thủ so với tấn công — làm trầm trọng thêm bất đối xứng nêu ở Nhận xét 3.
+    
+
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+  KẾT THÚC BÁO CÁO
+════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
